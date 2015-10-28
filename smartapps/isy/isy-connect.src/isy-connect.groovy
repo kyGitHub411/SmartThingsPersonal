@@ -33,6 +33,7 @@ preferences {
 }
 
 // Credentials preferences page - collect ISY username and password
+// added input for IP and port
 def credPage() {
     state.nodes = [:]
     state.devices = [:]
@@ -41,6 +42,8 @@ def credPage() {
         section("ISY Authentication") {
             input "username", "text", title: "Username"
             input "password", "password", title: "Password"
+            input "ip", "text", title: "IP"
+            input "port", "text", title: "Port"
         }
     }
 }
