@@ -42,8 +42,8 @@ def credPage() {
         section("ISY Authentication") {
             input "username", "text", title: "Username"
             input "password", "password", title: "Password"
-            input "ip", "text", title: "IP"
-            input "port", "text", title: "Port"
+            //input "ip", "text", title: "IP"
+            //input "port", "text", title: "Port"
         }
     }
 }
