@@ -15,8 +15,12 @@
  */
 
 metadata {
+	// ----added Switch Level, Thermostat, and Motion Sensor----
     definition (name: "ISY Controller", namespace: "isy", author: "Richard L. Lynch") {
         capability "Switch"
+        capability "Switch Level"
+        capability "Thermostat"
+        capability "Motion Sensor"
         capability "Polling"
         capability "Refresh"
         capability "Actuator"
@@ -27,6 +31,17 @@ metadata {
 
     tiles {
         standardTile("switch", "device.switch", width: 2, height: 2, canChangeIcon: true) {
+            state "on", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#79b821", nextState:"off"
+            state "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"on"
+        }
+        standardTile("switchlevel", "device.switchlevel", width: 2, height: 2, canChangeIcon: true) {
+            state "on", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#79b821", nextState:"off"
+            state "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"on"
+        }
+        valueTile("temperatureTile", "device.temperature", decoration: "flat") {
+           	state "temperature", label:'${currentValue} W'
+    	}
+        standardTile("motionsensor", "device.motionsensor", width: 2, height: 2, canChangeIcon: true) {
             state "on", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#79b821", nextState:"off"
             state "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"on"
         }
