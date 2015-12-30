@@ -1,7 +1,7 @@
 /**
  *  ISY Controller: On-Off
  *
- *  Copyright 2015 Kyle Landreth
+ *  Copyright 2014 Richard L. Lynch <rich@richlynch.com>
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,30 +13,22 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
+
 metadata {
-	definition (name: "ISY Controller: On-Off", namespace: "isy", author: "Kyle Landreth") {
-		capability "Actuator"
-        capability "Sensor"
+    definition (name: "ISY Controller: On-Off", namespace: "isy", author: "Richard L. Lynch") {
         capability "Switch"
-        //capability "Polling"
+        capability "Polling"
         capability "Refresh"
-	}
+        capability "Actuator"
+    }
 
-	simulator {
-		// status messages
-        //status "on": "on/off: 1"
-        //status "off": "on/off: 0"
-        
-        // reply messages
-        //reply "zcl on-off on": "on/off: 1"
-        //reply "zcl on-off off": "on/off: 0"
-	}
+    simulator {
+    }
 
-	// UI tile definitions
-	tiles(scale: 1){
-		standardTile("switch", "device.switch", width: 2, height: 2, canChangeIcon: true){
-        	state "off", label: "off", action: "switch.on", icon: "st.switches.switch.off", backgroundColor: "#ffffff"
-            state "on", label: "on", action: "switch.off", icon: "st.switches.switch.on", backgroundColor: "#79b821"
+    tiles {
+        standardTile("switch", "device.switch", width: 2, height: 2, canChangeIcon: true) {
+            state "on", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#79b821", nextState:"off"
+            state "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"on"
         }
         standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat") {
             state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
@@ -44,89 +36,80 @@ metadata {
 
         main "switch"
         details (["switch", "refresh"])
-	}
+    }
 }
 
 // parse events into attributes
 def parse(String description) {
-	log.debug "Parsing '${description}'"
-    
-    /* parse this for each device
-    	<properties>
-   			<property id="ST" value="0" formatted="Off" uom="%/on/off"/>
-		</properties>
-    */
+    log.debug "Parsing Dev ${device.deviceNetworkId} '${description}'"
 
-    /*part = part.trim()
-        if (part.startsWith('devicetype:')) {
-            def valueString = part.split(":")[1].trim()
-            device.devicetype = valueString
-      }*/
-/*       
-    def msg = parseLanMessage(description)
+    def parsedEvent = parseDiscoveryMessage(description)
+    //log.debug "Parsed event: " + parsedEvent
+    //log.debug "Body: " + parsedEvent['body']
+    if (parsedEvent['body'] != null) {
+        def xmlText = new String(parsedEvent.body.decodeBase64())
+        //log.debug 'Device Type Decoded body: ' + xmlText
 
-    def headerMap = msg.headers      // => headers as a Map   
-       
-    def attrName = null
-    def attrValue = null
+        def xmlTop = new XmlSlurper().parseText(xmlText)
+        def nodes = xmlTop.node
+        //log.debug 'Nodes: ' + nodes.size()
 
-    if (description?.startsWith("value=")) {
-        log.debug "switch value"
-        attrName = "switch"
-        attrValue = description?.endsWith("1") ? "on" : "off"
+        def childMap = [:]
+        parent.getChildDevices().each { child ->
+            def childNodeAddr = child.getDataValue("nodeAddr")
+            childMap[childNodeAddr] = child
+        }
+
+        nodes.each { node ->
+            def nodeAddr = node.attributes().id
+            def status = ''
+
+            node.property.each { prop ->
+                if (prop.attributes().id == 'ST') {
+                    status = prop.attributes().value
+                }
+            }
+
+            if (status != '' && childMap[nodeAddr]) {
+                def child = childMap[nodeAddr]
+
+                if (child.getDataValue("nodeAddr") == nodeAddr) {
+                    def value = 'on'
+                    if (status == '0') {
+                        value = 'off'
+                    }
+                    log.debug "Updating ${child.label} ${nodeAddr} to ${value}"
+                    child.sendEvent(name: 'switch', value: value)
+                }
+            }
+        }
     }
-
-    def result = createEvent(name: attrName, value: attrValue)
-
-    log.debug "Parse returned ${result?.descriptionText}"
-    return result
-*/    
 }
 
-// switch on handler (from Richard L. Lynch <rich@richlynch.com>)
-def on() {
-    log.debug "Executing 'on'"
-
-    sendEvent(name: 'switch', value: 'on')
-    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
-    def path = "/rest/nodes/${node}/cmd/DON"
-    getRequest(path)
+private Integer convertHexToInt(hex) {
+    Integer.parseInt(hex,16)
 }
 
-// switch off handler (from Richard L. Lynch <rich@richlynch.com>)
-def off() {
-    log.debug "Executing 'off'"
-
-    sendEvent(name: 'switch', value: 'off')
-    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
-    def path = "/rest/nodes/${node}/cmd/DOF"
-    getRequest(path)
+private String convertHexToIP(hex) {
+    [convertHexToInt(hex[0..1]),convertHexToInt(hex[2..3]),convertHexToInt(hex[4..5]),convertHexToInt(hex[6..7])].join(".")
 }
 
-// polling handler (from Richard L. Lynch <rich@richlynch.com>)
-/*def poll() {
-    if (!device.deviceNetworkId.contains(':')) {
-        log.debug "Executing 'poll' from ${device.deviceNetworkId}"
+private getHostAddress() {
+    def ip = getDataValue("ip")
+    def port = getDataValue("port")
 
-        def path = "/rest/status"
-        getRequest(path)
-    }
-    else {
-        log.debug "Ignoring poll request for ${device.deviceNetworkId}"
-    }
-}*/
-
-// refresh handler (from Richard L. Lynch <rich@richlynch.com>)
-def refresh() {
-    log.debug "Executing 'refresh'"
-
-    def path = "/rest/status"
-    getRequest(path)
+    //convert IP/port
+    ip = convertHexToIP(ip)
+    port = convertHexToInt(port)
+    log.debug "Using ip: ${ip} and port: ${port} for device: ${device.id}"
+    return ip + ":" + port
 }
 
+private getAuthorization() {
+    def userpassascii = getDataValue("username") + ":" + getDataValue("password")
+    "Basic " + userpassascii.encodeAsBase64().toString()
+}
 
-
-// get request to the ISY for any of the get commands (from Richard L. Lynch <rich@richlynch.com>)
 def getRequest(path) {
     log.debug "Sending request for ${path} from ${device.deviceNetworkId}"
 
@@ -139,49 +122,98 @@ def getRequest(path) {
         ], device.deviceNetworkId)
 }
 
-// gets the address of the hub (from SmartThings Doc1)
-private getCallBackAddress() {
-    return device.hub.getDataValue("localIP") + ":" + device.hub.getDataValue("localSrvPortTCP")
+// handle commands
+def on() {
+    log.debug "Executing 'on'"
+
+    sendEvent(name: 'switch', value: 'on')
+    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
+    def path = "/rest/nodes/${node}/cmd/DON"
+    getRequest(path)
 }
 
-// gets the address of the device (from SmartThings Doc1)
-private getHostAddress() {
-    def ip = getDataValue("ip")
-    def port = getDataValue("port")
+def off() {
+    log.debug "Executing 'off'"
 
-    if (!ip || !port) {
-        def parts = device.deviceNetworkId.split(":")
-        if (parts.length == 2) {
-            ip = parts[0]
-            port = parts[1]
-        } else {
-            log.warn "Can't figure out ip and port for device: ${device.id}"
+    sendEvent(name: 'switch', value: 'off')
+    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
+    def path = "/rest/nodes/${node}/cmd/DOF"
+    getRequest(path)
+}
+
+def poll() {
+    if (!device.deviceNetworkId.contains(':')) {
+        log.debug "Executing 'poll' from ${device.deviceNetworkId}"
+
+        def path = "/rest/status"
+        getRequest(path)
+    }
+    else {
+        log.debug "Ignoring poll request for ${device.deviceNetworkId}"
+    }
+}
+
+def refresh() {
+    log.debug "Executing 'refresh'"
+
+    def path = "/rest/status"
+    getRequest(path)
+}
+
+private def parseDiscoveryMessage(String description) {
+    def device = [:]
+    def parts = description.split(',')
+    parts.each { part ->
+        part = part.trim()
+        if (part.startsWith('devicetype:')) {
+            def valueString = part.split(":")[1].trim()
+            device.devicetype = valueString
+        } else if (part.startsWith('mac:')) {
+            def valueString = part.split(":")[1].trim()
+            if (valueString) {
+                device.mac = valueString
+            }
+        } else if (part.startsWith('networkAddress:')) {
+            def valueString = part.split(":")[1].trim()
+            if (valueString) {
+                device.ip = valueString
+            }
+        } else if (part.startsWith('deviceAddress:')) {
+            def valueString = part.split(":")[1].trim()
+            if (valueString) {
+                device.port = valueString
+            }
+        } else if (part.startsWith('ssdpPath:')) {
+            def valueString = part.split(":")[1].trim()
+            if (valueString) {
+                device.ssdpPath = valueString
+            }
+        } else if (part.startsWith('ssdpUSN:')) {
+            part -= "ssdpUSN:"
+            def valueString = part.trim()
+            if (valueString) {
+                device.ssdpUSN = valueString
+            }
+        } else if (part.startsWith('ssdpTerm:')) {
+            part -= "ssdpTerm:"
+            def valueString = part.trim()
+            if (valueString) {
+                device.ssdpTerm = valueString
+            }
+        } else if (part.startsWith('headers')) {
+            part -= "headers:"
+            def valueString = part.trim()
+            if (valueString) {
+                device.headers = valueString
+            }
+        } else if (part.startsWith('body')) {
+            part -= "body:"
+            def valueString = part.trim()
+            if (valueString) {
+                device.body = valueString
+            }
         }
     }
 
-    log.debug "Using IP: $ip and port: $port for device: ${device.id}"
-    return convertHexToIP(ip) + ":" + convertHexToInt(port)
+    device
 }
-
-// provides the username and password to log into the ISY (from Richard L. Lynch <rich@richlynch.com>)
-// format: <username>:<password> ??????
-private getAuthorization() {
-    def userpassascii = getDataValue("username") + ":" + getDataValue("password")
-    "Basic " + userpassascii.encodeAsBase64().toString()    // ??????
-}
-
-// convert Hex to Integer (from SmartThings Doc1)
-private Integer convertHexToInt(hex) {
-    return Integer.parseInt(hex,16)
-}
-
-// convert Hex to IP (from SmartThings Doc1)
-private String convertHexToIP(hex) {
-    return [convertHexToInt(hex[0..1]),convertHexToInt(hex[2..3]),convertHexToInt(hex[4..5]),convertHexToInt(hex[6..7])].join(".")
-}
-
-/** Documentation Used from SmartThings
-* Doc1: http://docs.smartthings.com/en/latest/cloud-and-lan-connected-device-types-developers-guide/building-lan-connected-device-types/building-the-device-type.html#making-outbound-http-calls-with-hubaction
-*
-*
-*/
