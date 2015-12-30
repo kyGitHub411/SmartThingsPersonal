@@ -25,7 +25,7 @@ definition(
     iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png") {
 }
 
-
+// ----commented out the isyPage----
 preferences {
     page(name:"credPage", title:"ISY Setup 1", content:"credPage")
     page(name:"isyPage", title:"ISY Setup 2", content:"isyPage")
@@ -33,7 +33,6 @@ preferences {
 }
 
 // Credentials preferences page - collect ISY username and password
-// added input for IP and port
 def credPage() {
     state.nodes = [:]
     state.devices = [:]
@@ -42,8 +41,6 @@ def credPage() {
         section("ISY Authentication") {
             input "username", "text", title: "Username"
             input "password", "password", title: "Password"
-            //input "ip", "text", title: "IP"
-            //input "port", "text", title: "Port"
         }
     }
 }
@@ -140,8 +137,8 @@ def locationHandler(evt) {
     def parsedEvent = parseDiscoveryMessage(description)
     parsedEvent << ["hub":hub]
 
-    // Force port 80 (0x50)
-    parsedEvent.port = '0050'
+    // Force port 80 (0x50) or 28411 (6EFB)
+    parsedEvent.port = '6EFB'
 
     if (parsedEvent?.ssdpTerm?.contains("udi-com:device:X_Insteon_Lighting_Device:1")) {
         def devices = getDevices()
