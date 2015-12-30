@@ -25,11 +25,10 @@ definition(
     iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png") {
 }
 
-// ----commented out the isyPage----
 preferences {
-    page(name:"credPage", title:"ISY Setup 1", content:"credPage")
-    page(name:"isyPage", title:"ISY Setup 2", content:"isyPage")
-    page(name:"nodePage", title:"ISY Setup 3", content:"nodePage")
+    page(name:"credPage", title:"ISY Setup 1/3", content:"credPage")
+    page(name:"isyPage", title:"ISY Setup 2/3", content:"isyPage")
+    page(name:"nodePage", title:"ISY Setup 3/3", content:"nodePage")
 }
 
 // Credentials preferences page - collect ISY username and password
@@ -96,7 +95,7 @@ def nodePage() {
 
     def nodes = getNodes()
 
-    return dynamicPage(name:"nodePage", title:"Node Selection", nextPage:"", refreshInterval: refreshInterval, install:true, uninstall: true) {
+    return dynamicPage(name:"nodePage", title:"ISY Setup 3/3", nextPage:"", refreshInterval: refreshInterval, install:true, uninstall: true) {
         section("Select nodes...") {
             input "selectedNodes", "enum", required:false, title:"Select Nodes \n(${nodes.size() ?: 0} found)", multiple:true, options:nodes
         }
@@ -131,6 +130,7 @@ def locationHandler(evt) {
     }
 
     log.debug('Received Response: ' + evt.description)
+    log.debug('Parsing: ' + $description)
 
     def description = evt.description
     def hub = evt?.hubId
@@ -160,7 +160,7 @@ def locationHandler(evt) {
                 def children = getChildDevices()
                 children.each {
                     if (it.getDeviceDataByName("mac") == parsedEvent.mac) {
-                        //it.subscribe(parsedEvent.ip, parsedEvent.port)
+                        //it.subscribe(parsedEvent.ip, parsedEvent.port)  //could error if device with same dni already exists
                     }
                 }
             }
