@@ -100,6 +100,9 @@ def nodePage() {
             input "selectedNodes", "enum", required:false, title:"Select Nodes \n(${nodes.size() ?: 0} found)", multiple:true, options:nodes
         }
     }
+    
+    //sendHubCommand(new physicalgraph.device.HubAction("lan discovery urn:udi-com:service:X_Insteon_Lighting_Service:1#Subscribe", physicalgraph.device.Protocol.LAN))
+
 }
 
 // Returns a map of Insteon nodes for the preferences page
