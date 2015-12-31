@@ -95,7 +95,7 @@ def nodePage() {
 
     def nodes = getNodes()
 
-    return dynamicPage(name:"nodePage", title:"ISY Setup 3/3", nextPage:"", refreshInterval: refreshInterval, install:true, uninstall: true) {
+    return dynamicPage(name:"nodePage", title:"ISY Setup 3/3 new", refreshInterval: refreshInterval, install: true, uninstall: true) {
         section("Select nodes...") {
             input "selectedNodes", "enum", required:false, title:"Select Nodes \n(${nodes.size() ?: 0} found)", multiple:true, options:nodes
         }
