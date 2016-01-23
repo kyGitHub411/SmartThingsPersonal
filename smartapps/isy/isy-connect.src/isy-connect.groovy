@@ -25,10 +25,11 @@ definition(
     iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png") {
 }
 
+
 preferences {
-    page(name:"credPage", title:"ISY Setup 1/3", content:"credPage")
-    page(name:"isyPage", title:"ISY Setup 2/3", content:"isyPage")
-    page(name:"nodePage", title:"ISY Setup 3/3", content:"nodePage")
+    page(name:"credPage", title:"ISY Setup 1", content:"credPage")
+    page(name:"isyPage", title:"ISY Setup 2", content:"isyPage")
+    page(name:"nodePage", title:"ISY Setup 3", content:"nodePage")
 }
 
 // Credentials preferences page - collect ISY username and password
@@ -95,14 +96,11 @@ def nodePage() {
 
     def nodes = getNodes()
 
-    return dynamicPage(name:"nodePage", title:"ISY Setup 3/3 new", refreshInterval: refreshInterval, install: true, uninstall: true) {
+    return dynamicPage(name:"nodePage", title:"Node Selection", nextPage:"", refreshInterval: refreshInterval, install:true, uninstall: true) {
         section("Select nodes...") {
             input "selectedNodes", "enum", required:false, title:"Select Nodes \n(${nodes.size() ?: 0} found)", multiple:true, options:nodes
         }
     }
-    
-    //sendHubCommand(new physicalgraph.device.HubAction("lan discovery urn:udi-com:service:X_Insteon_Lighting_Service:1#Subscribe", physicalgraph.device.Protocol.LAN))
-
 }
 
 // Returns a map of Insteon nodes for the preferences page
@@ -133,15 +131,14 @@ def locationHandler(evt) {
     }
 
     log.debug('Received Response: ' + evt.description)
-    log.debug('Parsing: ' + $description)
 
     def description = evt.description
     def hub = evt?.hubId
     def parsedEvent = parseDiscoveryMessage(description)
     parsedEvent << ["hub":hub]
 
-    // Force port 80 (0x50) or 28411 (6EFB)
-    parsedEvent.port = '6EFB'
+    // Force port 80 (0x50)
+    parsedEvent.port = '0050'
 
     if (parsedEvent?.ssdpTerm?.contains("udi-com:device:X_Insteon_Lighting_Device:1")) {
         def devices = getDevices()
@@ -163,7 +160,7 @@ def locationHandler(evt) {
                 def children = getChildDevices()
                 children.each {
                     if (it.getDeviceDataByName("mac") == parsedEvent.mac) {
-                        //it.subscribe(parsedEvent.ip, parsedEvent.port)  //could error if device with same dni already exists
+                        //it.subscribe(parsedEvent.ip, parsedEvent.port)
                     }
                 }
             }
@@ -243,7 +240,7 @@ def initialize() {
 
             if (!d) {
                 log.debug("Adding node ${nodeAddr} as ${dni}: ${nodes[nodeAddr]}")
-                d = addChildDevice("isy", "ISY Controller", dni, selDev?.value.hub, [
+                d = addChildDevice("isy", "ISY Switch", dni, selDev?.value.hub, [
                     "label": nodes[nodeAddr],
                     "data": [
                         "nodeAddr": nodeAddr,
