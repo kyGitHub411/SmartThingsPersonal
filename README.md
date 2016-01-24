@@ -2,6 +2,7 @@ smartthings-isy994i
 Allows a SmartThings hub to control Insteon devices through an ISY-994i
 
 Usage
+
 1) Go to https://graph.api.smartthings.com/ and add the app under "My SmartApps" and the device types under "My Device Types". Publish both for yourself.
 
 2) Open the SmartThings app, click on the Marketplace icon in the bottom right corner.
